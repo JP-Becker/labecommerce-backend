@@ -11,6 +11,12 @@ export type TProduct = {
     category: string
 }
 
+export enum PRODUCT {
+    FOOD = "Comida",
+    CLOTHES_AND_SHOES = "Roupas e calçados",
+    ELECTRONICS = "Eletrônicos"
+}
+
 export type TPurchase = {
     userId: string
     productId: string
