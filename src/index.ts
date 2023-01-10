@@ -1,5 +1,5 @@
 import { users, products, purchases } from "./database";
-import { TUser, TProduct, TPurchase } from "./types";
+import { TUser, TProduct, TPurchase, PRODUCT } from "./types";
 import  express, { Request, Response} from 'express'
 import cors from 'cors';
 
@@ -12,10 +12,6 @@ app.listen(3003, () => {
     console.log("Servidor rodando na porta 3003")
 })
 
-// teste
-app.get('/ping', (req: Request, res: Response) => {
-    res.send('Pong')
-})
 
 // get all users
 app.get('/users', (req: Request, res: Response) => {
@@ -97,3 +93,94 @@ app.post('/purchases', (req: Request, res: Response) => {
     res.status(201).send("Compra realizada com sucesso!")
 })
 
+
+// acha produto por id com path params
+app.get('/products/:id', (req: Request, res: Response) => {
+    const id = req.params.id
+
+    const selectedProduct = products.find(p => p.id === id)
+
+    res.status(200).send(selectedProduct)
+})
+
+
+// acha as compras realizados pelo usuário correspondente a id com path params
+app.get('/users/:id/purchases', (req: Request, res: Response) => {
+    const id = req.params.id
+
+    const userPurchases = purchases.find(p => p.userId === id)
+
+    res.status(200).send(userPurchases)
+})
+
+
+// deleta o usuario pela id
+app.delete('/user/:id', (req: Request, res: Response) => {
+    const id = req.params.id
+
+    const indexToRemove = users.findIndex(user => user.id === id)
+
+    if (indexToRemove >= 0) {
+        users.splice(indexToRemove, 1)
+    }
+
+    res.status(200).send("Conta removida!")
+})
+
+
+// deleta o produto pela id
+app.delete("/product/:id", (req: Request, res: Response) => {
+    const id = req.params.id
+
+    const indexToRemove = products.findIndex(product => product.id === id)
+
+    if (indexToRemove >= 0) {
+        products.splice(indexToRemove, 1)
+    }
+
+    res.status(200).send("Produto removido!")
+})
+
+
+// edita as informações do user por id
+app.put("/user/:id", (req: Request, res: Response) => {
+    const paramsId = req.params.id
+
+    const newId = req.body.id as string | undefined
+    const newEmail = req.body.email as string | undefined
+    const newPassword = req.body.password as string | undefined
+
+    const selectedUser = users.find(user => user.id === paramsId)
+
+    if (selectedUser) {
+
+        selectedUser.id = newId || selectedUser.id
+        selectedUser.email = newEmail || selectedUser.email
+        selectedUser.password = newPassword || selectedUser.password
+
+    }
+
+    res.status(200).send('Atualização realizada com sucesso')
+})
+
+
+// edita os valores do produto correspondente a id
+app.put('/product/:id', (req: Request, res: Response) => {
+    const paramsId = req.params.id
+
+    const newId = req.body.id as string | undefined
+    const newName = req.body.name as string | undefined
+    const newPrice = req.body.price as number 
+    const newCategory = req.body.category as PRODUCT | undefined
+
+    const selectedProduct = products.find(p => p.id === paramsId)
+
+    if (selectedProduct) {
+        selectedProduct.id = newId || selectedProduct.id
+        selectedProduct.name = newName || selectedProduct.name
+        selectedProduct.category = newCategory || selectedProduct.category
+        selectedProduct.price = isNaN(newPrice) ? selectedProduct.price: newPrice
+    }
+
+    res.status(200).send("Produto atualizado com sucesso")
+})
