@@ -28,23 +28,6 @@ VALUES
     ("p123", "Camiseta", 49, "Roupas e calçados");
 
 
-CREATE TABLE purchases (
-    userId TEXT NOT NULL,
-    productId TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    totalPrice INTEGER NOT NULL
-);
-
-DROP TABLE purchases;
-
-INSERT INTO purchases (userId, productId, quantity, totalPrice)
-VALUES
-    ('u001', 'p031', 2, 20),
-    ('u001', 'p093', 3, 45),
-    ('u003', 'p121', 1, 149),
-    ('u002', 'p012', 2, 5998),
-    ('u003', 'p123', 5, 245);
-    
 
 SELECT * FROM users;
 
@@ -84,15 +67,69 @@ WHERE price >=100 AND price <=300
 SELECT * FROM purchases;
 
 
--- CREATE TABLE purchases_products (
---     purchase_id TEXT NOT NULL,
---     product_id TEXT NOT NULL,
---     quantity INTEGER NOT NULL
--- );
+CREATE TABLE purchases (
+    id TEXT PRIMARY KEY UNIQUE NOT NULL,
+    total_price REAL NOT NULL,
+    paid INTEGER NOT NULL,
+    delivered_at TEXT, 
+    buyer_id TEXT NOT NULL,
+    FOREIGN KEY (buyer_id) REFERENCES clients (id)
+);
 
--- INSERT INTO purchases_products (purchase_id, product_id, quantity)
--- VALUES 
---     ("purchase1", "p031", 2),
---     ("purchase2", "p093", 3),
---     ("purchase3", "p121", 1);
+DROP TABLE purchases;
+
+INSERT INTO purchases (id, total_price, paid, delivered_at, buyer_id) 
+VALUES 
+    ("pu001", 20, 1, NULL,"u001"),
+    ("pu002", 2999, 0, NULL,"u001"),
+    ("pu003", 98, 0, NULL,"u002"),
+    ("pu004", 45, 0, NULL,"u003");
+
+UPDATE purchases
+SET delivered_at = datetime('now')
+WHERE id="pu001";
+
+SELECT 
+users.id AS clientID,
+users.email,
+users.password,
+purchases.*
+FROM users
+INNER JOIN purchases
+ON purchases.buyer_id = users.id;
+
+-- Criação da tabela de relações
+CREATE TABLE purchases_products
+(purchase_id TEXT NOT NULL, 
+product_id TEXT NOT NULL,
+quantity INTEGER NOT NULL,
+FOREIGN KEY (purchase_id) REFERENCES purchases(id),
+FOREIGN KEY (product_id) REFERENCES products(id));
+
+DROP TABLE purchases_products;
+
+SELECT * FROM purchases_products;
+
+--Exercicio 2
+--Popule sua tabela purchases_products simulando 3 compras de clientes.
+INSERT INTO purchases_products (purchase_id, product_id, quantity)
+VALUES ("pu001","p031", 2), 
+("pu002","p012", 1), 
+("pu004","p093", 3);
+
+SELECT * FROM purchases_products;
+
+-- Mostre em uma query todas as colunas das tabelas relacionadas (purchases_products, purchases e products).
+SELECT 
+purchases.id AS purchaseID,
+products.id AS productId,
+products.name AS productName,
+purchases_products.quantity,
+purchases.buyer_id,
+purchases.total_price
+FROM purchases_products
+INNER JOIN purchases
+ON purchases_products.purchase_id = purchases.id
+INNER JOIN products
+ON purchases_products.product_id = products.id;
 
