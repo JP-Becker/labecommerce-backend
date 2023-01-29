@@ -7,3 +7,4 @@ var PRODUCT;
     PRODUCT["CLOTHES_AND_SHOES"] = "Roupas e cal\u00E7ados";
     PRODUCT["ELECTRONICS"] = "Eletr\u00F4nicos";
 })(PRODUCT = exports.PRODUCT || (exports.PRODUCT = {}));
+//# sourceMappingURL=types.js.map

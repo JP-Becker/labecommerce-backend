@@ -1,5 +1,5 @@
 // import { users, products, purchases } from "./database";
-import { TUser, TProduct, TPurchase, PRODUCT } from "./types";
+import { TUser, TProduct, TPurchase, PRODUCT, TPurchaseProduct } from "./types";
 import  express, { Request, Response} from 'express'
 import cors from 'cors';
 import { db } from './database/knex'
@@ -18,9 +18,7 @@ app.listen(3003, () => {
 // get all users
 app.get('/users', async (req: Request, res: Response) => {
     try {
-        const result = await db.raw(
-            `SELECT * FROM users;`
-        )
+        const result = await db("users")
         res.status(200).send({Usuários: result})
     } catch (error: any) {
         console.log(error)
@@ -40,9 +38,7 @@ app.get('/users', async (req: Request, res: Response) => {
 // get all products
 app.get('/products', async (req: Request, res: Response) => {
     try {
-        const result = await db.raw(
-            `SELECT * FROM products;`
-        )
+        const result = await db("products")
         res.status(200).send({Produtos: result})
     } catch (error: any) {
         console.log(error)
@@ -65,10 +61,12 @@ app.get('/products/search', async (req: Request, res: Response) => {
         const q = req.query.q as string
 
         if (q.length > 0) {
-            const searchedProduct = await db.raw(
-                `SELECT * FROM products 
-                WHERE name LIKE "%${q}%"`
-            )
+            // const searchedProduct = await db.raw(
+            //     `SELECT * FROM products 
+            //     WHERE name LIKE "%${q}%"`
+            // )
+
+            const searchedProduct = await db("products").where("name", "LIKE", `${q}`)
     
             res.status(200).send(searchedProduct)
         } else {
@@ -93,11 +91,15 @@ app.get('/products/search', async (req: Request, res: Response) => {
 //Create user
 app.post('/users', async (req: Request, res: Response) => {
     try {
-        const {id, name, email, password, createdAt} = req.body
+        const {id, name, email, password} = req.body
 
         if (typeof id !== "string") {
             res.status(400)
             throw new Error ("Tipo de 'id' inválido")
+        }
+        if (id[0] !== "u") {
+            res.status(400)
+            throw new Error ("'id' deve começar com a letra u")
         }
         if (typeof name !== "string") {
             res.status(400)
@@ -111,18 +113,23 @@ app.post('/users', async (req: Request, res: Response) => {
             res.status(400)
             throw new Error ("Tipo de 'password' inválido")
         }
-        if (typeof createdAt !== "string") {
+
+        const [userIdAlreadyExists] : TUser[] | undefined[] = await db("users").where({id})
+
+        if (userIdAlreadyExists) {
             res.status(400)
-            throw new Error ("Tipo de 'createdAt' inválido")
+            throw new Error("Essa 'id' já existe");
         }
 
-        await db.raw(
-            `
-            INSERT INTO users (id, name, email, password, createdAt)
-            VALUES 
-                ("${id}", "${name}", "${email}", "${password}", "${createdAt}");
-            `
-        )
+        const newUser = {
+            id, 
+            name, 
+            email, 
+            password, 
+        }
+
+        await db.insert(newUser).into("users")
+
         res.status(201).send(`Usuário ${name} criado com sucesso!`)
     } catch (error: any) {
         console.log(error)
@@ -162,13 +169,14 @@ app.post('/products', async (req: Request, res: Response) => {
             throw new Error ("Tipo de 'category' inválido")
         }
 
-        await db.raw(
-            `
-            INSERT INTO products (id, name, price, category)
-            VALUES 
-                ("${id}", "${name}", "${price}", "${category}");
-            `
-        )
+        const newProduct = {
+            id, 
+            name, 
+            price, 
+            category
+        }
+
+        await db.insert(newProduct).into("products")
         res.status(201).send(`Produto ${name} criado com sucesso!`)
     
     } catch (error: any) {
@@ -190,9 +198,7 @@ app.post('/products', async (req: Request, res: Response) => {
 // get all purchases
 app.get("/purchases", async (req: Request, res: Response) => {
     try {
-        const result = await db.raw(
-            `SELECT * FROM purchases;`
-        )
+        const result = await db("purchases")
         res.status(200).send({Compras: result})
     } catch (error: any) {
         console.log(error)
@@ -235,13 +241,16 @@ app.post('/purchases', async (req: Request, res: Response) => {
             throw new Error ("Tipo de 'buyer_id' inválido")
         }
 
-        await db.raw(
-            `
-            INSERT INTO purchases (id, total_price, paid, delivered_at, buyer_id)
-            VALUES 
-                ("${id}", "${total_price}", "${paid}", "${delivered_at}", "${buyer_id}");
-            `
-        )
+        const newPurchases = {
+            id, 
+            total_price, 
+            paid, 
+            delivered_at, 
+            buyer_id
+        }
+
+        await db.insert(newPurchases).into("purchases")
+
         res.status(201).send(`Compra de id ${id} criado com sucesso!`)
     } catch (error: any) {
         console.log(error)
@@ -265,12 +274,7 @@ app.get('/products/:id', async (req: Request, res: Response) => {
     try {
         const paramsId = req.params.id
 
-        const result = await db.raw(
-            `
-            SELECT * FROM products
-            WHERE id = "${paramsId}";
-            `
-        )
+        const result = await db("products").where({ id: paramsId})
         
         res.status(200).send(result)
         
@@ -295,12 +299,7 @@ app.get('/users/:id/purchases', async (req: Request, res: Response) => {
     try {
         const id = req.params.id
         
-        const result = await db.raw(
-            `
-            SELECT * FROM purchases
-            WHERE buyer_id = "${id}"
-            `
-        )
+        const result = await db("users").where({ id: id})
         res.status(200).send(result)
     } catch (error: any) {
         console.log(error)
@@ -316,6 +315,34 @@ app.get('/users/:id/purchases', async (req: Request, res: Response) => {
         }
     }
     
+})
+
+
+// get purchase by id
+app.get("/purchases/:id", async (req: Request, res: Response) => {
+    try {
+        const searchedId = req.params.id
+
+        const result = await db("purchases").where({ id: searchedId }).innerJoin(
+            "users",
+            "purchases.email",
+            "=",
+            "users.email"
+        )
+        res.status(200).send(result)
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
 })
 
 
